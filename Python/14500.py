@@ -1,35 +1,65 @@
 import sys
 
-from collections import deque
+input = sys.stdin.readline
 
-r,c = map(int,sys.stdin.readline().split())
-mat = [list(map(int,sys.stdin.readline().split())) for _ in range(r)]
+N,M = map(int, input().split())
 
-Q = deque()
-output= 0
+mat = [list(map(int,input().split()))for _ in range(N)]
+visit = [[0 for _ in range(M)] for _ in range(N)]
 
-dx = [1,-1,0,0]
-dy = [0,0,1,-1]
+max_val = 0
 
-def dfs(x, y):
+dr = [1,-1,0,0]
+dc = [0,0,1,-1]
 
-    for i in range(4):
-        nx = x + dx[i]
-        ny = y + dy[i]
-        
-        if len(Q) == 4:
-            global output
-            output = max(output, sum(Q))
-            Q.pop()
-        
-        if(nx >= 0 and nx < c, ny >= 0 and ny < r):
-            Q.append(mat[x][y])
-            dfs(nx,ny)
+def checkBoundary(r,c):
+    return True if 0<=r<N and 0<=c<M else False
 
-for i in range(r):
-    for j in range(c):
-        dfs(i,j)
+def speicalBoundary(positions):
+    for pos in positions:
+        if not checkBoundary(pos[0],pos[1]):
+            return False
+    return True
 
-print(output)
+def bfs(depth, val, r,c):
+    global max_val, visit
+    if depth == 4:
+        max_val = max(val, max_val)
+        # print(visit)
+        return
 
+    visit[r][c] = 1
+    for dir in range(4):
+        nr = r + dr[dir]
+        nc = c + dc[dir]
+        if checkBoundary(nr,nc) and visit[nr][nc] != 1:
+            bfs(depth+1, val+mat[r][c],nr,nc)
+    visit[r][c] = 0
 
+def pronged(r,c):
+    global max_val
+    shapes = [
+        [(0, 0), (-1, 0), (1, 0), (0, 1)],  # ㅜ
+        [(0, 0), (-1, 0), (1, 0), (0, -1)], # ㅗ
+        [(0, 0), (0, -1), (0, 1), (1, 0)],  # ㅏ
+        [(0, 0), (0, -1), (0, 1), (-1, 0)]  # ㅓ
+    ]
+
+    for shape in shapes:
+        val = 0
+        valid = True
+        for dr, dc in shape:
+            nr, nc = r+dr, c+dc
+            if not checkBoundary(nr,nc):
+                valid = False
+                break
+            val += mat[nr][nc]
+        if valid:
+            max_val = max(val, max_val)
+
+for i in range(N):
+    for j in range(M):
+        bfs(0,0,i,j)
+        pronged(i,j)
+
+print(max_val)
