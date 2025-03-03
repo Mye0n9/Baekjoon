@@ -2,41 +2,69 @@ import sys
 
 input = sys.stdin.readline
 
-R,C,M = map(int,input().split())
+R, C, M = map(int, input().split())
 
-mat = [[0 for _ in range(C)] for _ in range(R)]
-sharks = []
+if M == 0:
+    print(0)
+    exit()
+
+sharks = {}  # (r, c) -> [s, d, z]
+res = 0
 
 for _ in range(M):
-    r,c,s,d,z = map(int,input().split())
-    sharks.append([r-1,c-1,s,d,z])
+    r, c, s, d, z = map(int, input().split())
+    sharks[(r - 1, c - 1)] = [s, d, z]
 
-def checkBoundary(r,c):
-    return True if 0<=r<R and 0<=c<C else False
+# 방향: 1: 위, 2: 아래, 3: 오른쪽, 4: 왼쪽
+dr = [-1, 1, 0, 0]
+dc = [0, 0, 1, -1]
 
-dr = [-1,1,0,0]
-dc = [0,0,1,-1]
-# 1: 위, 2: 아래, 3: 오, 4: 아래
+# 방향을 0-indexed로 조정
+direction_map = {1: 0, 2: 1, 3: 2, 4: 3}
+for key in sharks:
+    sharks[key][1] = direction_map[sharks[key][1]]
 
-def move(shark): # 각 한번씩 이동 할 때의 move
-    r,c,s,d,z = shark
-    itr = s
-    while itr:
-        if checkBoundary(r+dr[d-1],c+dc[d-1]): # 새로운 좌표가 격자안에 있다면
-            nr = r + dr[d-1]
-            nc = c + dc[d-1]
+
+def move_sharks():
+    """ 상어를 이동시킨 후 새로운 위치를 업데이트하는 함수 """
+    new_sharks = {}
+
+    for (r, c), (s, d, z) in sharks.items():
+        if d in [0, 1]:  # 위/아래 방향 이동
+            cycle = (R - 1) * 2
+        else:  # 좌/우 방향 이동
+            cycle = (C - 1) * 2
+
+        move_steps = s % cycle  # 불필요한 이동 줄이기
+
+        for _ in range(move_steps):
+            nr, nc = r + dr[d], c + dc[d]
+            if 0 <= nr < R and 0 <= nc < C:
+                r, c = nr, nc
+            else:  # 벽에 부딪히면 방향 변경
+                d ^= 1  # (0 ↔ 1), (2 ↔ 3)
+                r, c = r + dr[d], c + dc[d]
+
+        # 새로운 위치에 상어가 존재하는 경우 크기 비교
+        if (r, c) in new_sharks:
+            if new_sharks[(r, c)][2] < z:
+                new_sharks[(r, c)] = [s, d, z]
         else:
-            # 방향 전환: 위 <-> 아래, 왼 <-> 오
-            if d%2 == 1:
-                d+=1
-            else:
-                d-=1
-            nr = r + dr[d-1]
-            nc = c + dc[d-1]
-        r = nr
-        c = nc
-        itr -= 1
-    return [r,c,s,d,z]
+            new_sharks[(r, c)] = [s, d, z]
 
-# 잡힌 정보, 먹힌 정보 처리
-# 작은 애들부터 먼저 이동 시키면, 이동 했을 때, 크기 비교해서 가능?
+    return new_sharks
+
+
+# 1. 낚시왕이 오른쪽으로 한 칸씩 이동
+for c in range(C):
+    # 2. 낚시왕이 있는 열에서 가장 가까운 상어를 잡는다.
+    for r in range(R):
+        if (r, c) in sharks:
+            res += sharks[(r, c)][2]  # 상어 크기 추가
+            del sharks[(r, c)]
+            break
+
+    # 3. 상어 이동
+    sharks = move_sharks()
+
+print(res)
